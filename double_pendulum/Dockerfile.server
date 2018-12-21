@@ -1,0 +1,80 @@
+FROM ubuntu:14.04
+
+MAINTAINER Petar Maric <petarmaric@uns.ac.rs>
+
+# Fix Docker-specific Ubuntu issues
+# (see https://journal.paul.querna.org/articles/2013/10/15/docker-ubuntu-on-rackspace/ for details)
+ENV DEBIAN_FRONTEND noninteractive
+ENV INITRD No
+
+# Update the Ubuntu package index and install the required Ubuntu packages
+RUN apt-get update -qq && apt-get install -qq -y \
+  python-dev \
+  python-gmpy \
+  python-pip \
+  python-tables \
+  rabbitmq-server \
+  redis-server \
+  supervisor \
+  > /dev/null
+
+# Install the required Python packages
+# Celery has to be installed via pip, as Ubuntu distributes an older version which has a critical bug involving chords
+# (see http://celery.readthedocs.org/en/latest/changelog.html for details)
+RUN pip install -q "celery[librabbitmq,redis]>=3.1.18"
+
+# Parameterize this Dockerfile, by storing the configuration within environment variables 
+ENV MAX_CPU_CORES 1
+ENV COMPUTER_TYPE server
+ENV SERVER_NAME server
+ENV WORKER_LIST worker
+ENV MONITORING_IS_ACTIVE 0
+ENV MONITORING_SERVER_NAME server
+ENV MONITORING_SERVER_PORT 2003
+ENV MONITORING_INTERVAL 30
+ENV MONITORING_METRIC_PREFIX experiments.double_pendulum
+
+# App specific configuration, based on 'beam_integrals' defaults
+ENV TMAX 30
+ENV DT 0.01
+ENV THETA_RESOLUTION 5
+
+# HDF5 storage configuration
+ENV HDF5_COMPLIB zlib
+ENV HDF5_COMPLEVEL 1
+
+# Create a directory for storing results
+ENV RESULTS_DIR /results
+RUN mkdir -p $RESULTS_DIR
+VOLUME $RESULTS_DIR
+
+# Supervisor configuration for Celery
+COPY docker/files/supervisor/celery.conf /etc/supervisor/conf.d/celery.conf
+COPY docker/files/supervisor/celerybeat.conf /etc/supervisor/conf.d/celerybeat.conf
+
+# Supervisor configuration for RabbitMQ
+COPY docker/files/supervisor/rabbitmq.conf /etc/supervisor/conf.d/rabbitmq.conf
+COPY docker/files/supervisor/rabbitmq-supervisor /usr/bin/rabbitmq-supervisor
+RUN chmod +x /usr/bin/rabbitmq-supervisor
+
+# Supervisor configuration for Redis
+COPY docker/files/supervisor/redis.conf /etc/supervisor/conf.d/redis.conf
+COPY docker/files/redis/redis.conf /etc/redis/redis.conf
+
+# Expose RabbitMQ and Redis to the network
+EXPOSE 5672 6379
+
+# Deploy the app
+COPY double_pendulum /code/double_pendulum/
+ENV PYTHONPATH /code
+
+# Configuration script (will be applied only if ENV 'DOCKER_CONFIGURE_SCRIPT' is set)
+ENV DOCKER_CONFIG_SCRIPT docker-configure.py
+COPY docker/${DOCKER_CONFIG_SCRIPT} /
+RUN chmod +x /${DOCKER_CONFIG_SCRIPT}
+
+# Starter script
+COPY docker/docker-entrypoint.sh /
+RUN chmod +x /docker-entrypoint.sh
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["supervisord", "-n", "-c", "/etc/supervisor/supervisord.conf"]
