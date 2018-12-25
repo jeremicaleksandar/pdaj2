@@ -1,0 +1,8 @@
+#!/bin/bash
+set -e
+
+# Call "rabbitmqctl stop" when exiting. Based on http://stackoverflow.com/a/9803987
+trap "{ echo 'Stopping RabbitMQ (via helper script)'; rabbitmqctl stop; exit 0; }" EXIT
+
+echo 'Starting RabbitMQ (via helper script)'
+rabbitmq-server

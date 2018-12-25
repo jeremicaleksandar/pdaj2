@@ -1,0 +1,10 @@
+export_beam_integrals 1.0.1 (April 11, 2016)
+
+    * Vagrant: Added the vbguest plugin as a dependency, to keep VirtualBox
+      Guest Additions up to date.
+
+    * Vagrantfile: The configuration `docker.version' has been deprecated.
+
+export_beam_integrals 1.0.0 (November 17, 2015)
+
+    * Initial release.
