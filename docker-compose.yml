@@ -18,6 +18,6 @@ server:
     MAX_CPU_CORES: 1
     TMAX: 30
     DT: 0.01
-	THETA_RESOLUTION: 5
+    THETA_RESOLUTION: 5
   volumes:
    - /tmp/results:/results

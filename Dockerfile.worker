@@ -1,6 +1,6 @@
 FROM ubuntu:14.04
 
-MAINTAINER Petar Maric <petarmaric@uns.ac.rs>
+MAINTAINER Jeremic Aleksandar <jeremicaleksandar15@gmail.com>
 
 # Fix Docker-specific Ubuntu issues
 # (see https://journal.paul.querna.org/articles/2013/10/15/docker-ubuntu-on-rackspace/ for details)
@@ -18,7 +18,7 @@ RUN apt-get update -qq && apt-get install -qq -y \
 # Install the required Python packages
 # Celery has to be installed via pip, as Ubuntu distributes an older version which has a critical bug involving chords
 # (see http://celery.readthedocs.org/en/latest/changelog.html for details)
-RUN pip install -q "celery[librabbitmq,redis]>=3.1.18"
+RUN pip install -q "celery[redis]==3.1.18" "librabbitmq==1.6.1"
 
 # Parameterize this Dockerfile, by storing the configuration within environment variables 
 ENV MAX_CPU_CORES 1
