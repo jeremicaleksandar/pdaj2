@@ -8,15 +8,15 @@ ENV DEBIAN_FRONTEND noninteractive
 ENV INITRD No
 
 # Update the Ubuntu package index and install the required Ubuntu packages
-RUN apt-get update -qq && apt-get install -qq -y \
+RUN apt-get update && apt-get install -y \
   python-dev \
-  python-gmpy \
+  python-numpy \
+  python-scipy \
   python-pip \
-  python-tables \
   rabbitmq-server \
   redis-server \
   supervisor \
-  > /dev/null
+  && rm -rf /var/lib/apt/lists/*
 
 # Install the required Python packages
 # Celery has to be installed via pip, as Ubuntu distributes an older version which has a critical bug involving chords

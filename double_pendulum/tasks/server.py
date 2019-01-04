@@ -10,11 +10,12 @@ import time
 from celery import chain, chord
 from celery.exceptions import Reject
 import numpy as np
-import tables as tb
+#import tables as tb
+import csv
 
-import double_pendulum as ebi
+from .worker import simulate_pendulum_instance
 from ..app import app
-from .worker import compute_integral, combine_computed_integrals_into_a_table
+#from .worker import compute_integral, combine_computed_integrals_into_a_table
 
 
 ## Monitoring tasks
@@ -74,12 +75,12 @@ def parametric_sweep(theta_resolution, tmax, dt):
 
     import itertools
     t1t2_inits = itertools.product(theta1_inits, theta2_inits)
-	return ((L1, L2, m1, m2, tmax, dt, t1t2_i[0], t1t2_i[1]) for t1t2_i in t1t2_inits)
+    return ((L1, L2, m1, m2, tmax, dt, t1t2_i[0], t1t2_i[1]) for t1t2_i in t1t2_inits)
 
 @app.task
 def seed_computations(ignore_result=True):
-    if os.path.exists(get_experiment_status_filename('started')):
-        raise Reject('Computations have already been seeded!')
+    #if os.path.exists(get_experiment_status_filename('started')):
+        #raise Reject('Computations have already been seeded!')
 
     record_experiment_status.si('started').delay()
     
@@ -89,10 +90,10 @@ def seed_computations(ignore_result=True):
 
     chord(
         (
-			simulate_pendulum_instance(L1, L2, m1, m2, tmax, dt, theta1_init, theta2_init)
-			for (L1, L2, m1, m2, tmax, dt, theta1_init, theta2_init) in
-			parametric_sweep(theta_resolution, tmax, dt)
-		),
+            simulate_pendulum_instance.s(L1, L2, m1, m2, tmax, dt, theta1_init, theta2_init)
+            for (L1, L2, m1, m2, tmax, dt, theta1_init, theta2_init) in
+            parametric_sweep(_theta_res, _tmax, _dt)
+        ),
         store_computed_integral_tables.s()
     ).delay()
 
@@ -145,9 +146,13 @@ def get_hdf5_table_description(used_variables, decimal_precision):
     return columns
 
 @app.task
-def store_computed_integral_tables(results):
-	with open('blah.csv', 'w') as out:
-		out.write(results)
+def store_computed_integral_tables(solutions):    
+    with open('/home/dpc.csv', 'wb') as csvfile:
+        csvwriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        csvwriter.writerow(["theta1_init", "theta2_init", "theta1_last", "theta2_last", "x1_last", "y1_last", "x2_last", "y2_last"])      
+        for t1i, t2i, results in solutions:
+            theta1, theta2, x1, y1, x2, y2 = results #to je ono sto je solve izracunao
+            csvwriter.writerow([t1i, t2i, theta1[-1], theta2[-1], x1[-1], y1[-1], x2[-1], y2[-1]])
 
 '''
     beam_type = BaseBeamType.coerce(beam_type_id)
